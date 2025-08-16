@@ -1,0 +1,50 @@
+# route:
+#   receiver: dev-null
+
+# route tree
+route:
+  receiver: 'gotify' # Default route if nothing matches
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+
+  routes:
+    # 2) Warning from the platform team → Gotify
+    - matchers:
+        - severity="warning"
+        - team="platform"
+      receiver: gotify
+
+    # 3) Explicit channels with targeted labels (flexible pattern)
+    - matchers: [ 'notify="gotify"' ]
+      receiver: gotify
+    - matchers: [ 'notify="teams"' ]
+      receiver: msteams
+    - matchers: [ 'notify="opsgenie"' ]
+      receiver: opsgenie
+
+receivers:
+  - name: dev-null
+
+  # Gotify through bridge adapter
+  - name: gotify
+    webhook_configs:
+      - url: 'http://am2gotify:5000/webhook'
+      #- url: 'http://gotify/message'
+        http_config:
+          bearer_token: 'AB2J1sfp_9EBvPO'
+        send_resolved: true
+
+  - name: msteams
+    webhook_configs:
+      - url: 'http://prometheus-msteams:2000/alertmanager'  # a bridge belső címe
+        send_resolved: true
+
+  # --- Opsgenie (natív) ---
+  - name: opsgenie
+    opsgenie_configs:
+      - api_key: '<OPSGENIE_API_KEY>'
+        tags: 'prometheus, {{ .CommonLabels.team }}, {{ .CommonLabels.severity }}'
+        priority: '{{ if eq .CommonLabels.severity "critical" }}P1{{ else }}P3{{ end }}'
+        send_resolved: true

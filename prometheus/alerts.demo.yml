@@ -1,0 +1,25 @@
+groups:
+  - name: blackbox-demo
+    rules:
+    - alert: EndpointDown
+      expr: probe_success{job="blackbox-http", instance="http://webapp:8000/healthz"} == 0
+      for: 30s
+      labels:
+        severity: critical
+        team: platform
+      annotations:
+        summary: "Endpoint down ({{ $labels.instance }})"
+        description: "Blackbox probe failed for 30s."
+
+  - name: gotify-test
+    rules:
+      - alert: GotifyTestAlert
+        expr: vector(1)
+        for: 10s
+        labels:
+          severity: critical
+          team: platform
+          notify: gotify
+        annotations:
+          summary: "Gotify test alert"
+          description: "This is a test alert sent from Prometheus to Gotify."

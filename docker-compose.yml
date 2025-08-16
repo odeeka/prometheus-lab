@@ -1,0 +1,141 @@
+version: "3.9"
+
+services:
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    networks: [monitoring]
+    ports:
+      - "9115:9115"            # opcionális, csak ha a hostról is akarod hívni
+    volumes:
+      - ./blackbox/blackbox.yml:/config/blackbox.yml:ro
+    command:
+      - --config.file=/config/blackbox.yml
+    cap_add:
+      - NET_RAW                # ICMP probe-hoz kell
+    security_opt:
+      - no-new-privileges:true
+
+  webapp:
+    build: ./python-app
+    container_name: webapp
+    restart: unless-stopped
+    networks: [monitoring]
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_PORT=8000
+      - APP_NAME=demo-webapp
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoriametrics
+    networks: [monitoring]
+    ports:
+      - "8428:8428"               # HTTP + beépített UI (VMUI)
+    volumes:
+      - vm-data:/storage
+    command:
+      - --storageDataPath=/storage
+      - --retentionPeriod=1       # 1 nap, csak tesztre
+
+  node-exporter-a:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-a
+    restart: unless-stopped
+    networks: [monitoring]
+    pid: host
+    # host metrikákhoz a host filesystemt csatoljuk és rootfs módot használunk
+    volumes:
+      - /:/host:ro
+    command:
+      - --path.rootfs=/host
+    ports:
+      - "9101:9100" # host:container
+
+  node-exporter-b:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-b
+    restart: unless-stopped
+    networks: [monitoring]
+    pid: host
+    volumes:
+      - /:/host:ro
+    command:
+      - --path.rootfs=/host
+    ports:
+      - "9102:9100" # host:container
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    networks: [monitoring]
+    ports:
+      - "9090:9090"
+    volumes:
+#      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#      - ./prometheus/alerts.demo.yml:/etc/prometheus/alerts.demo.yml:ro
+#      - ./prometheus/prometheus_rules.yml:/etc/prometheus/prometheus_rules.yml:ro
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    networks: [monitoring]
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    networks: [monitoring]
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  gotify:
+    image: gotify/server
+    container_name: gotify
+    restart: unless-stopped
+    networks: [monitoring]
+    ports: ["8082:80"]
+    volumes:
+      - gotify-data:/app/data
+
+  # Alertmanager to Gotify adapter
+  am2gotify:
+    build: ./adapters/am2gotify
+    container_name: am2gotify
+    restart: unless-stopped
+    networks: [monitoring]
+    environment:
+      - GOTIFY_URL=http://gotify         # Docker network name
+      - GOTIFY_TOKEN=ASe9dL-os-yWZf_     # <-- Gotify Application token
+    ports:
+      - "5001:5000"                      # Optional; only if you want to call it from outside
+
+networks:
+  monitoring: {}
+
+volumes:
+  prometheus-data: {}
+  gotify-data: {}
+  grafana-data: {}
+  vm-data: {}
+
