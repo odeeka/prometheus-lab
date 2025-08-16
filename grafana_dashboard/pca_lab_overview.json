@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 39,
+  "title": "PCA Lab Overview",
+  "uid": "pca-lab-overview",
+  "version": 1,
+  "tags": [
+    "prometheus",
+    "lab",
+    "pca"
+  ],
+  "refresh": "10s",
+  "timezone": "",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "CPU usage (by instance)",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "1 - avg by (instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Free memory % (recording rule)",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemFree_percent",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Filesystem free % on / (recording rule)",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "node_filesystem_Free_percent",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Webapp request rate",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(demo_requests_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Blackbox HTTP availability (probe_success)",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "probe_success{job=\"blackbox-http\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 15
+      }
+    },
+    {
+      "type": "stat",
+      "title": "All targets up (min over core jobs)",
+      "datasource": {
+        "type": "prometheus",
+        "name": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "min(up{job=~\"prometheus|webapp|node_exporter|blackbox-http\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 15
+      }
+    }
+  ]
+}
